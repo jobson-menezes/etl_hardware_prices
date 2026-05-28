@@ -1,41 +1,68 @@
-# 🚀 Arquitetura ETL: Monitoramento Automatizado de Preços (Hardware)
+# 🚀 ETL Architecture: Automated Price Monitoring (Hardware)
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![Pandas](https://img.shields.io/badge/pandas-%23150458.svg?style=for-the-badge&logo=pandas&logoColor=white)
 ![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 
-## 📌 O Problema de Negócio
-O planejamento financeiro para a montagem de um computador de alta performance exige precisão e acompanhamento de mercado. Com um teto de orçamento estritamente fixado em R$ 8.600, a flutuação de preços de componentes críticos — especificamente a placa de vídeo RTX 5060 — representava um risco ao projeto. 
+## 📌 Business Problem
+Financial planning for building a high-performance computer requires precision and market tracking. With a strict budget cap of R$ 8,600, price fluctuations of critical components — specifically the RTX 5060 GPU — posed a risk to the project. 
 
-A solução foi desenvolver um **Pipeline ETL (Extract, Transform, Load)** autônomo. O robô monitora o e-commerce Kabum, burla o carregamento dinâmico da página para capturar os dados em sua raiz, e cria um banco de dados histórico estruturado, permitindo análises temporais de quedas de preço e promoções.
-
----
-
-## ⚙️ Arquitetura do Projeto
-
-O pipeline foi modularizado seguindo as melhores práticas de Engenharia de Dados corporativa, separando responsabilidades para garantir escalabilidade e resiliência.
-
-* **Extract (`extract.py`):** * Utiliza `requests` e `BeautifulSoup`.
-    * *Engenharia Reversa:* A extração via HTML convencional falha devido à renderização dinâmica via JavaScript. O script contorna isso interceptando diretamente a tag oculta contendo o payload estruturado em **JSON-LD** (`application/ld+json`).
-* **Transform (`transform.py`):** * A biblioteca `pandas` recebe os dados brutos em memória.
-    * Filtra ruídos, isola o dicionário de ofertas (`offers`) e estrutura a lista em um DataFrame relacional limpo contendo o nome do produto e o preço decimalizado.
-* **Load (`load.py`):** * Integração via `sqlalchemy`.
-    * Os dados não são sobrescritos. O objetivo é criar um **Data Warehouse Histórico (OLAP)**. A cada execução, um timestamp é anexado e as linhas são inseridas de forma incremental (`append`) no banco de dados local **SQLite**, permitindo "viagens no tempo" analíticas.
-* **Orquestração (`main.py` e Task Scheduler):** * O fluxo é coordenado pelo script maestro.
-    * A automação foi implementada a nível de Sistema Operacional (Windows Task Scheduler + arquivo `.bat` apontando para o ambiente virtual), garantindo a execução diária em background sem intervenção humana.
+The solution was to develop an autonomous **ETL (Extract, Transform, Load) Pipeline**. The bot monitors the Kabum e-commerce, bypasses dynamic page loading to capture data at its root, and creates a structured historical database, enabling temporal analysis of price drops and promotions.
 
 ---
 
-## 🛠️ Como Executar Localmente
+## ⚙️ Project Architecture
 
-### Pré-requisitos
-* Python 3.x instalado.
-* Conexão ativa com a internet.
+The pipeline was modularized following corporate Data Engineering best practices, separating responsibilities to ensure scalability and resilience.
 
-### Passo a Passo
+* **Extract (`extract.py`):** * Uses `requests` and `BeautifulSoup`.
+    * *Reverse Engineering:* Conventional HTML extraction fails due to dynamic JavaScript rendering. The script bypasses this by directly intercepting the hidden tag containing the structured payload in **JSON-LD** (`application/ld+json`).
+* **Transform (`transform.py`):** * The `pandas` library handles raw data in memory.
+    * Filters noise, isolates the `offers` dictionary, and structures the list into a clean relational DataFrame containing the product name and decimalized price.
+* **Load (`load.py`):** * Integration via `sqlalchemy`.
+    * Data is not overwritten. The goal is to build a **Historical Data Warehouse (OLAP)**. On each execution, a timestamp is appended, and rows are incrementally inserted (`append`) into a local **SQLite** database, enabling analytical "time travel".
+* **Orchestration (`main.py` & Task Scheduler):** * The flow is coordinated by the maestro script.
+    * Automation was implemented at the OS level (Windows Task Scheduler + `.bat` file pointing to the virtual environment), ensuring daily execution in the background without human intervention.
 
-1. **Clone o repositório:**
+---
+
+## 🛠️ How to Run Locally
+
+### Prerequisites
+* Python 3.x installed.
+* Active internet connection.
+
+### Step by Step
+
+1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/SEU-USUARIO/etl_hardware_prices.git](https://github.com/SEU-USUARIO/etl_hardware_prices.git)
-   cd etl_hardware_prices
+   git clone https://github.com/jobson-menezes/etl_hardware_prices.git
+cd etl_hardware_prices
+
+2. **Create and activate the virtual environment:**
+    ```bash
+    python -m venv venv
+
+source venv/Scripts/activate  # On Windows
+
+3. **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+
+4. **Run the Pipeline Manually:**
+    ````bash
+    python main.py
+
+After execution, the hardware_db.sqlite file will be automatically generated in the project root with the day's data.
+
+📊 SQL Queries & Data Analysis
+With the database populated over several days, you can connect tools like DBeaver or Power BI to consume the data. Example of a query used to fetch only the most recent price of each GPU to avoid duplicates on the screen:
+
+SELECT 
+    Produto, 
+    "Preço (R$)", 
+    MAX(Data_Coleta) as Ultima_Atualizacao
+FROM historico_precos
+GROUP BY Produto
+ORDER BY "Preço (R$)" ASC;
