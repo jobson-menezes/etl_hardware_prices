@@ -59,6 +59,7 @@ After execution, the hardware_db.sqlite file will be automatically generated in 
 📊 SQL Queries & Data Analysis
 With the database populated over several days, you can connect tools like DBeaver or Power BI to consume the data. Example of a query used to fetch only the most recent price of each GPU to avoid duplicates on the screen:
 
+    ```bash
 SELECT 
     Produto, 
     "Preço (R$)", 
